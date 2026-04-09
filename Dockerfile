@@ -14,7 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --noinput
+# Build-time fallback values so collectstatic can run even when .env is not part of the build context.
+RUN SECRET_KEY=build-secret-key \
+    DB_NAME=build_db \
+    DB_USER=build_user \
+    DB_PASSWORD=build_password \
+    python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
