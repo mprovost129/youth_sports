@@ -1,5 +1,10 @@
 from pathlib import Path
 import os
+import re
+from urllib.parse import parse_qs, urlparse, unquote
+
+from django.core.exceptions import ImproperlyConfigured
+from django.db.backends.signals import connection_created
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -8,6 +13,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Load .env from project root
 load_dotenv(BASE_DIR / '.env')
+
+
+def _postgres_config_from_database_url(database_url: str) -> dict:
+    parsed = urlparse(database_url)
+
+    if parsed.scheme not in ('postgres', 'postgresql'):
+        raise ImproperlyConfigured('DATABASE_URL must use postgres/postgresql scheme.')
+
+    db_name = parsed.path.lstrip('/')
+    if not db_name:
+        raise ImproperlyConfigured('DATABASE_URL must include a database name in the path.')
+
+    query = parse_qs(parsed.query)
+
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': unquote(db_name),
+        'USER': unquote(parsed.username or ''),
+        'PASSWORD': unquote(parsed.password or ''),
+        'HOST': parsed.hostname or 'localhost',
+        'PORT': str(parsed.port or 5432),
+        # Render commonly requires SSL for managed Postgres connections.
+        'OPTIONS': {
+            'sslmode': query.get('sslmode', ['require'])[0],
+        },
+    }
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ['SECRET_KEY']
@@ -137,8 +168,11 @@ LOGGING = {
 }
 
 # Database
-DATABASES = {
-    'default': {
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    default_db = _postgres_config_from_database_url(database_url)
+else:
+    default_db = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ['DB_NAME'],
         'USER': os.environ['DB_USER'],
@@ -146,7 +180,28 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
+
+DB_SCHEMA = os.environ.get('DB_SCHEMA', 'youth_sports')
+if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', DB_SCHEMA):
+    raise ImproperlyConfigured(
+        'DB_SCHEMA must be a valid PostgreSQL schema identifier (letters, numbers, underscores).'
+    )
+
+DATABASES = {
+    'default': default_db,
 }
+
+
+def _set_connection_schema(sender, connection, **kwargs):
+    if connection.vendor != 'postgresql':
+        return
+
+    with connection.cursor() as cursor:
+        cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"')
+        cursor.execute(f'SET search_path TO "{DB_SCHEMA}", public')
+
+
+connection_created.connect(_set_connection_schema)
 
 # Email
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
