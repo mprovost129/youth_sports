@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ listing.title }}{% endblock %}
+{% block meta_description %}Details for {{ listing.title }} in {{ listing.city_town }}.{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ listing.title }} | Youth Sports &amp; Activities{% endblock %}
+{% block og_description %}Details for {{ listing.title }} in {{ listing.city_town }}.{% endblock %}
+{% block og_url %}{{ canonical_url }}{% endblock %}
+{% block og_image %}
+{% if og_image_url %}<meta property="og:image" content="{{ og_image_url }}">{% endif %}
+{% endblock %}
+{% block extra_meta %}
+<link rel="canonical" href="{{ canonical_url }}">
+{% endblock %}
+
+{% block content %}
+<article class="content-panel p-4">
+    {% if listing.image %}
+    <div class="mb-3">
+        <img src="{{ listing.image.url }}" alt="{{ listing.title }} image" class="detail-image">
+    </div>
+    {% endif %}
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <span class="badge text-bg-light mb-2">{{ listing.get_category_display }} | {{ listing.subtype }}</span>
+            <h1 class="h2 mb-1">{{ listing.title }}</h1>
+            <p class="text-muted mb-0">{{ listing.organization_name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if user.is_staff %}
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'core:edit_listing' listing.pk %}">Edit Listing</a>
+            {% endif %}
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'core:listing_outbound' listing.pk %}" target="_blank" rel="noopener noreferrer">Registration</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <h2 class="h6">Program Details</h2>
+            <p class="mb-1"><strong>Ages:</strong> {{ listing.age_min }}-{{ listing.age_max }}</p>
+            <p class="mb-1"><strong>Gender:</strong> {{ listing.get_gender_display }}</p>
+            <p class="mb-1"><strong>City/Town:</strong> {{ listing.city_town }}</p>
+            <p class="mb-1"><strong>Location:</strong> {{ listing.location_name }}</p>
+            {% if listing.address %}
+            <p class="mb-1"><strong>Address:</strong> {{ listing.address }}</p>
+            {% endif %}
+        </div>
+        <div class="col-12 col-md-6">
+            <h2 class="h6">Schedule</h2>
+            {% if listing.start_date %}
+            <p class="mb-1"><strong>Start:</strong> {{ listing.start_date|date:"F j, Y" }}</p>
+            <p class="mb-1"><strong>End:</strong> {% if listing.end_date %}{{ listing.end_date|date:"F j, Y" }}{% else %}Not specified{% endif %}</p>
+            {% else %}
+            <p class="mb-1"><strong>Season/Dates:</strong> {{ listing.season_or_dates }}</p>
+            {% endif %}
+            {% if listing.cost %}
+            <p class="mb-1"><strong>Cost:</strong> {{ listing.cost }}</p>
+            {% endif %}
+            <p class="mb-1"><strong>Last Updated:</strong> {{ listing.updated_at|date:"F j, Y" }}</p>
+            <p class="mb-1"><strong>Last Verified:</strong> {{ listing.last_verified_at|date:"F j, Y" }}</p>
+            {% if is_stale %}
+            <p class="mb-0 text-danger small">Verification is older than 90 days and may need review.</p>
+            {% else %}
+            <p class="mb-0 text-success small">Recently verified.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2 class="h6">Description</h2>
+    <p class="mb-0">{{ listing.description }}</p>
+</article>
+
+<section class="content-panel p-4 mt-3">
+    <h2 class="h5 mb-2">Report Outdated Information</h2>
+    <p class="small text-muted">If anything looks incorrect, send a quick report so we can verify and update it.</p>
+    <form method="post" class="row g-3">
+        {% csrf_token %}
+        {% if report_form.non_field_errors %}
+        <div class="col-12">
+            <div class="alert alert-danger mb-0">{{ report_form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+        <div class="col-md-6">
+            <label for="{{ report_form.reporter_email.id_for_label }}" class="form-label">Email (optional)</label>
+            {{ report_form.reporter_email }}
+            {% for error in report_form.reporter_email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+            <label for="{{ report_form.notes.id_for_label }}" class="form-label">What looks outdated?</label>
+            {{ report_form.notes }}
+            {% for error in report_form.notes.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-outline-danger">Submit Report</button>
+        </div>
+    </form>
+</section>
+
+{% if user.is_staff %}
+<section class="content-panel p-4 mt-3">
+    <h2 class="h5 mb-2">Change Log</h2>
+    {% if change_logs %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Action</th>
+                    <th>By</th>
+                    <th>Fields</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in change_logs %}
+                <tr>
+                    <td>{{ log.created_at|date:"M j, Y g:i A" }}</td>
+                    <td>{{ log.get_action_display }}</td>
+                    <td>{% if log.actor %}{{ log.actor.email }}{% else %}<span class="text-muted">System</span>{% endif %}</td>
+                    <td>{% if log.changed_fields %}{{ log.changed_fields|join:", " }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No change history recorded yet.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

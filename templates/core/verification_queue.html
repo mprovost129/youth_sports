@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}Verification Queue{% endblock %}
+{% block meta_description %}Staff verification queue for stale listings and reported issues.{% endblock %}
+
+{% block content %}
+<section class="content-panel p-4 mb-3">
+    <h1 class="h3 mb-2">Verification Queue</h1>
+    <p class="text-muted mb-3">Review stale listings and unresolved reports to keep family-facing information accurate.</p>
+    <div class="row g-2">
+        <div class="col-6 col-md-3"><span class="badge text-bg-light">Drafts: {{ queue_summary.draft_count }}</span></div>
+        <div class="col-6 col-md-3"><span class="badge text-bg-warning">Stale: {{ queue_summary.stale_count }}</span></div>
+        <div class="col-6 col-md-3"><span class="badge text-bg-danger">Reports: {{ queue_summary.open_report_count }}</span></div>
+        <div class="col-6 col-md-3"><span class="badge text-bg-primary">Suggestions: {{ queue_summary.pending_suggestion_count }}</span></div>
+    </div>
+    <p class="text-muted small mt-2 mb-0">Snapshot generated: {{ queue_snapshot_generated_at|date:"M j, Y g:i A" }}</p>
+</section>
+
+<section class="content-panel p-4 mb-3">
+    <h2 class="h5 mb-3">Queue Filters</h2>
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="id-town" class="form-label">Town</label>
+            <select id="id-town" name="town" class="form-select">
+                <option value="">Any</option>
+                {% for town in town_options %}
+                <option value="{{ town }}" {% if queue_filters.town == town %}selected{% endif %}>{{ town }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="id-sport" class="form-label">Sport / Type</label>
+            <select id="id-sport" name="sport" class="form-select">
+                <option value="">Any</option>
+                {% for sport in sport_options %}
+                <option value="{{ sport }}" {% if queue_filters.sport == sport %}selected{% endif %}>{{ sport }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 form-check mt-4">
+            <input class="form-check-input" type="checkbox" value="1" id="id-has-reports" name="has_reports" {% if queue_filters.has_reports %}checked{% endif %}>
+            <label class="form-check-label" for="id-has-reports">Has reports</label>
+        </div>
+        <div class="col-md-2 form-check mt-4">
+            <input class="form-check-input" type="checkbox" value="1" id="id-stale-only" name="stale_only" {% if queue_filters.stale_only %}checked{% endif %}>
+            <label class="form-check-label" for="id-stale-only">Stale only</label>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+            <a href="{% url 'core:verification_queue' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="content-panel p-4 mb-3">
+    <h2 class="h5 mb-3">Draft Listings Pending Publish</h2>
+    {% if draft_listings %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Listing</th>
+                    <th>Town</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for listing in draft_listings %}
+                <tr>
+                    <td>{{ listing.title }}</td>
+                    <td>{{ listing.city_town }}</td>
+                    <td>{{ listing.updated_at|date:"M j, Y" }}</td>
+                    <td class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'core:edit_listing' listing.pk %}">Edit</a>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="publish">
+                            <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Publish</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if draft_page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Draft pagination">
+        <ul class="pagination mt-3 mb-0">
+            {% if draft_page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?draft_page={{ draft_page_obj.previous_page_number }}&stale_page={{ stale_page_obj.number }}&reports_page={{ reports_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Draft page {{ draft_page_obj.number }} of {{ draft_page_obj.paginator.num_pages }}</span></li>
+            {% if draft_page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?draft_page={{ draft_page_obj.next_page_number }}&stale_page={{ stale_page_obj.number }}&reports_page={{ reports_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="text-muted mb-0">No draft listings waiting for publish.</p>
+    {% endif %}
+</section>
+
+<section class="content-panel p-4 mb-3">
+    <h2 class="h5 mb-3">Stale Listings (90+ days since verification)</h2>
+    {% if stale_listings %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Listing</th>
+                    <th>Town</th>
+                    <th>Last Verified</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for listing in stale_listings %}
+                <tr>
+                    <td>{{ listing.title }}</td>
+                    <td>{{ listing.city_town }}</td>
+                    <td>{{ listing.last_verified_at|date:"M j, Y" }}</td>
+                    <td class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'core:listing_detail' listing.pk %}">Open</a>
+                        <a href="{% url 'core:edit_listing' listing.pk %}">Edit</a>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="verify">
+                            <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mark Verified Today</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if stale_page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Stale pagination">
+        <ul class="pagination mt-3 mb-0">
+            {% if stale_page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?stale_page={{ stale_page_obj.previous_page_number }}&draft_page={{ draft_page_obj.number }}&reports_page={{ reports_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Stale page {{ stale_page_obj.number }} of {{ stale_page_obj.paginator.num_pages }}</span></li>
+            {% if stale_page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?stale_page={{ stale_page_obj.next_page_number }}&draft_page={{ draft_page_obj.number }}&reports_page={{ reports_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="text-muted mb-0">No stale listings right now.</p>
+    {% endif %}
+</section>
+
+<section class="content-panel p-4">
+    <h2 class="h5 mb-3">Unresolved Outdated Reports</h2>
+    {% if open_reports %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Listing</th>
+                    <th>Reported</th>
+                    <th>Reporter</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in open_reports %}
+                <tr>
+                    <td>{{ report.listing.title }}</td>
+                    <td>{{ report.created_at|date:"M j, Y" }}</td>
+                    <td>{% if report.reporter_email %}{{ report.reporter_email }}{% else %}<span class="text-muted">Anonymous</span>{% endif %}</td>
+                    <td>{{ report.notes }}</td>
+                    <td class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'core:listing_detail' report.listing.pk %}">Open</a>
+                        <a href="{% url 'core:edit_listing' report.listing.pk %}">Edit</a>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="resolve">
+                            <input type="hidden" name="report_id" value="{{ report.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mark Resolved</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if reports_page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Reports pagination">
+        <ul class="pagination mt-3 mb-0">
+            {% if reports_page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?reports_page={{ reports_page_obj.previous_page_number }}&draft_page={{ draft_page_obj.number }}&stale_page={{ stale_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Reports page {{ reports_page_obj.number }} of {{ reports_page_obj.paginator.num_pages }}</span></li>
+            {% if reports_page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?reports_page={{ reports_page_obj.next_page_number }}&draft_page={{ draft_page_obj.number }}&stale_page={{ stale_page_obj.number }}&suggestions_page={{ suggestions_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="text-muted mb-0">No unresolved reports.</p>
+    {% endif %}
+</section>
+
+<section class="content-panel p-4 mt-3">
+    <h2 class="h5 mb-3">Pending Public Suggestions</h2>
+    {% if pending_suggestions %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Town</th>
+                    <th>Submitted</th>
+                    <th>Submitter</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for suggestion in pending_suggestions %}
+                <tr>
+                    <td>{{ suggestion.title }}</td>
+                    <td>{{ suggestion.city_town }}</td>
+                    <td>{{ suggestion.created_at|date:"M j, Y" }}</td>
+                    <td>{% if suggestion.submitter_email %}{{ suggestion.submitter_email }}{% else %}<span class="text-muted">Anonymous</span>{% endif %}</td>
+                    <td class="d-flex flex-wrap gap-2">
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve_suggestion">
+                            <input type="hidden" name="suggestion_id" value="{{ suggestion.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Approve & Publish</button>
+                        </form>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject_suggestion">
+                            <input type="hidden" name="suggestion_id" value="{{ suggestion.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if suggestions_page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Suggestions pagination">
+        <ul class="pagination mt-3 mb-0">
+            {% if suggestions_page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?suggestions_page={{ suggestions_page_obj.previous_page_number }}&draft_page={{ draft_page_obj.number }}&stale_page={{ stale_page_obj.number }}&reports_page={{ reports_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Suggestions page {{ suggestions_page_obj.number }} of {{ suggestions_page_obj.paginator.num_pages }}</span></li>
+            {% if suggestions_page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?suggestions_page={{ suggestions_page_obj.next_page_number }}&draft_page={{ draft_page_obj.number }}&stale_page={{ stale_page_obj.number }}&reports_page={{ reports_page_obj.number }}&town={{ queue_filters.town|urlencode }}&sport={{ queue_filters.sport|urlencode }}{% if queue_filters.has_reports %}&has_reports=1{% endif %}{% if queue_filters.stale_only %}&stale_only=1{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="text-muted mb-0">No pending suggestions.</p>
+    {% endif %}
+</section>
+{% endblock %}

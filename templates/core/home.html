@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Youth Sports & Activities{% endblock %}
+{% block meta_description %}Find youth sports and activities in Attleboro and nearby towns.{% endblock %}
+
+{% block content %}
+<section class="hero-card mb-4 p-4 p-lg-5">
+    <h1 class="display-6 fw-bold mb-3">Find youth sports and activities in one place</h1>
+    <p class="lead mb-4">Skip scattered searches. Browse trusted local programs by sport, activity, age, and town.</p>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{% url 'core:sports' %}">Browse Sports</a>
+        <a class="btn btn-outline-primary" href="{% url 'core:activities' %}">Browse Activities</a>
+    </div>
+</section>
+
+<section class="mb-4">
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <article class="content-panel p-3 h-100">
+                <h2 class="h5 mb-2">Browse By Sport</h2>
+                <p class="small text-muted mb-3">Jump right to local youth programs by sport type.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for subtype in popular_sports %}
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'core:sports_subtype' subtype_slug=subtype|slugify %}">{{ subtype }}</a>
+                    {% empty %}
+                    <span class="text-muted small">Sports will appear here as listings are added.</span>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+        <div class="col-12 col-lg-6">
+            <article class="content-panel p-3 h-100">
+                <h2 class="h5 mb-2">Browse By Town</h2>
+                <p class="small text-muted mb-3">Start with your city or town and see what is available.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for town in popular_towns %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:sports' %}?city_town={{ town|urlencode }}">{{ town }}</a>
+                    {% empty %}
+                    <span class="text-muted small">Towns will appear here as listings are added.</span>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Upcoming Programs</h2>
+        <a href="{% url 'core:sports' %}" class="small">View all</a>
+    </div>
+    <div class="row g-3">
+        {% for listing in upcoming_listings %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <article class="listing-card h-100 p-3">
+                {% if listing.image %}
+                <img src="{{ listing.image.url }}" alt="{{ listing.title }} image" class="listing-thumb mb-2">
+                {% endif %}
+                <span class="badge text-bg-light mb-2">{{ listing.get_category_display }}</span>
+                {% if listing.is_stale %}
+                <span class="badge text-bg-warning mb-2">Needs review</span>
+                {% else %}
+                <span class="badge text-bg-success mb-2">Verified recently</span>
+                {% endif %}
+                <h3 class="h6 mb-1">{{ listing.title }}</h3>
+                <p class="mb-1 text-muted">{{ listing.subtype }} | {{ listing.city_town }}</p>
+                <p class="mb-2 small">
+                    {% if listing.start_date %}
+                    {{ listing.start_date|date:"M j, Y" }}{% if listing.end_date %} - {{ listing.end_date|date:"M j, Y" }}{% endif %}
+                    {% else %}
+                    {{ listing.season_or_dates }}
+                    {% endif %}
+                </p>
+                <p class="small text-muted mb-2">Updated {{ listing.updated_at|date:"M j, Y" }} | Verified {{ listing.last_verified_at|date:"M j, Y" }}</p>
+                <a href="{% url 'core:listing_detail' listing.pk %}" class="small">View details</a>
+            </article>
+        </div>
+        {% empty %}
+        <p class="text-muted">No active listings yet.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Recently Added</h2>
+    </div>
+    <div class="row g-3">
+        {% for listing in recent_listings %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <article class="listing-card h-100 p-3">
+                {% if listing.image %}
+                <img src="{{ listing.image.url }}" alt="{{ listing.title }} image" class="listing-thumb mb-2">
+                {% endif %}
+                {% if listing.is_stale %}
+                <span class="badge text-bg-warning mb-2">Needs review</span>
+                {% else %}
+                <span class="badge text-bg-success mb-2">Verified recently</span>
+                {% endif %}
+                <h3 class="h6 mb-1">{{ listing.title }}</h3>
+                <p class="mb-1 text-muted">{{ listing.organization_name }}</p>
+                <p class="mb-2 small">{{ listing.city_town }} | Ages {{ listing.age_min }}-{{ listing.age_max }}</p>
+                <p class="small text-muted mb-2">Updated {{ listing.updated_at|date:"M j, Y" }} | Verified {{ listing.last_verified_at|date:"M j, Y" }}</p>
+                <a href="{% url 'core:listing_detail' listing.pk %}" class="small">View details</a>
+            </article>
+        </div>
+        {% empty %}
+        <p class="text-muted">No recent listings yet.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="content-panel p-3">
+    <h2 class="h5 mb-2">How This Helps Families</h2>
+    <ul class="mb-0">
+        <li>Find local opportunities faster without searching dozens of sites.</li>
+        <li>Filter by age, town, and program type to match your child.</li>
+        <li>Use direct links to official program pages for registration details.</li>
+    </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Suggest A Listing{% endblock %}
+{% block meta_description %}Suggest a youth sports or activity listing for staff review.{% endblock %}
+
+{% block content %}
+<section class="content-panel p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Suggest A Listing</h1>
+    </div>
+    <p class="text-muted small">Submit the same details used by staff intake. We review submissions before publishing.</p>
+
+    <form method="post" enctype="multipart/form-data" class="row g-3" id="suggest-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="col-12">
+            <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+
+        <div class="col-md-4">
+            <label for="{{ form.listing_type.id_for_label }}" class="form-label">Organized Sport or Activity</label>
+            {{ form.listing_type }}
+        </div>
+        <div class="col-md-4">
+            <label for="{{ form.state.id_for_label }}" class="form-label">State</label>
+            {{ form.state }}
+        </div>
+        <div class="col-md-4">
+            <label for="{{ form.county.id_for_label }}" class="form-label">County</label>
+            {{ form.county }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.city_town_ref.id_for_label }}" class="form-label">City/Town</label>
+            {{ form.city_town_ref }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.city_town_manual.id_for_label }}" class="form-label">City/Town (manual)</label>
+            {{ form.city_town_manual }}
+        </div>
+
+        <div class="col-md-6 sport-fields">
+            <label for="{{ form.sport_type.id_for_label }}" class="form-label">Sport</label>
+            {{ form.sport_type }}
+        </div>
+        <div class="col-md-6 sport-fields">
+            <label for="{{ form.custom_sport.id_for_label }}" class="form-label">Sport (manual)</label>
+            {{ form.custom_sport }}
+        </div>
+        <div class="col-md-6 activity-fields">
+            <label for="{{ form.activity_type.id_for_label }}" class="form-label">Activity</label>
+            {{ form.activity_type }}
+        </div>
+        <div class="col-md-6 activity-fields">
+            <label for="{{ form.custom_activity.id_for_label }}" class="form-label">Activity (manual)</label>
+            {{ form.custom_activity }}
+        </div>
+
+        <div class="col-md-6">
+            <label for="{{ form.organization_name.id_for_label }}" class="form-label">Organization Name</label>
+            {{ form.organization_name }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.title.id_for_label }}" class="form-label">Title (optional)</label>
+            {{ form.title }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.location_name.id_for_label }}" class="form-label">Location Name</label>
+            {{ form.location_name }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.address.id_for_label }}" class="form-label">Address</label>
+            {{ form.address }}
+        </div>
+        <div class="col-md-3">
+            <label for="{{ form.age_min.id_for_label }}" class="form-label">Age Min</label>
+            {{ form.age_min }}
+        </div>
+        <div class="col-md-3">
+            <label for="{{ form.age_max.id_for_label }}" class="form-label">Age Max</label>
+            {{ form.age_max }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.gender.id_for_label }}" class="form-label">Gender</label>
+            {{ form.gender }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.season_or_dates.id_for_label }}" class="form-label">Season / Dates</label>
+            {{ form.season_or_dates }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.registration_url.id_for_label }}" class="form-label">External Link</label>
+            {{ form.registration_url }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.image.id_for_label }}" class="form-label">Logo / Main Image</label>
+            {{ form.image }}
+            <div class="form-text">{{ form.image.help_text }}</div>
+        </div>
+        <div class="col-12">
+            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+            {{ form.description }}
+        </div>
+        <div class="col-12 form-check">
+            {{ form.confirm_possible_duplicate }}
+            <label for="{{ form.confirm_possible_duplicate.id_for_label }}" class="form-check-label">
+                {{ form.confirm_possible_duplicate.label }}
+            </label>
+            <div class="form-text">Only use this if this is intentionally separate from similar listings.</div>
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.submitter_name.id_for_label }}" class="form-label">Your Name (optional)</label>
+            {{ form.submitter_name }}
+        </div>
+        <div class="col-md-6">
+            <label for="{{ form.submitter_email.id_for_label }}" class="form-label">Your Email (optional)</label>
+            {{ form.submitter_email }}
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Submit For Review</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById('suggest-form');
+    if (!form) return;
+
+    const typeField = document.getElementById('{{ form.listing_type.id_for_label }}');
+    const stateField = document.getElementById('{{ form.state.id_for_label }}');
+    const countyField = document.getElementById('{{ form.county.id_for_label }}');
+    const cityField = document.getElementById('{{ form.city_town_ref.id_for_label }}');
+
+    const sportBlocks = Array.from(document.querySelectorAll('.sport-fields'));
+    const activityBlocks = Array.from(document.querySelectorAll('.activity-fields'));
+
+    const setOptions = (selectEl, items, placeholder) => {
+        const keep = selectEl.value;
+        selectEl.innerHTML = '';
+        const first = document.createElement('option');
+        first.value = '';
+        first.textContent = placeholder;
+        selectEl.appendChild(first);
+        items.forEach((item) => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.name;
+            selectEl.appendChild(opt);
+        });
+        if (keep && Array.from(selectEl.options).some(o => o.value === keep)) {
+            selectEl.value = keep;
+        }
+    };
+
+    const toggleTypeFields = () => {
+        const isSport = typeField.value === 'sport';
+        sportBlocks.forEach(el => el.classList.toggle('d-none', !isSport));
+        activityBlocks.forEach(el => el.classList.toggle('d-none', isSport));
+    };
+
+    const loadCounties = async () => {
+        if (!stateField.value) {
+            setOptions(countyField, [], 'Select county');
+            setOptions(cityField, [], 'Select city/town');
+            return;
+        }
+        const res = await fetch('{% url "core:public_counties_by_state" %}?state_id=' + encodeURIComponent(stateField.value));
+        const data = await res.json();
+        setOptions(countyField, data.results, 'Select county');
+        setOptions(cityField, [], 'Select city/town');
+    };
+
+    const loadCities = async () => {
+        if (!countyField.value) {
+            setOptions(cityField, [], 'Select city/town');
+            return;
+        }
+        const res = await fetch('{% url "core:public_cities_by_county" %}?county_id=' + encodeURIComponent(countyField.value));
+        const data = await res.json();
+        setOptions(cityField, data.results, 'Select city/town');
+    };
+
+    typeField.addEventListener('change', toggleTypeFields);
+    stateField.addEventListener('change', loadCounties);
+    countyField.addEventListener('change', loadCities);
+
+    toggleTypeFields();
+})();
+</script>
+{% endblock %}

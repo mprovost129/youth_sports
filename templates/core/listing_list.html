@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}Browse {{ page_title|lower }} in Attleboro and surrounding towns.{% endblock %}
+{% block og_title %}{{ page_title }} | Youth Sports &amp; Activities{% endblock %}
+{% block og_description %}Browse {{ page_title|lower }} in Attleboro and surrounding towns.{% endblock %}
+{% block og_url %}{{ canonical_url }}{% endblock %}
+{% block extra_meta %}
+<link rel="canonical" href="{{ canonical_url }}">
+<script type="application/ld+json">{{ seo_json_ld|safe }}</script>
+{% endblock %}
+
+{% block content %}
+<section class="mb-4">
+    <h1 class="h2 mb-3">{{ page_title }}</h1>
+    {% if active_section == 'sport' and sports_subtype_links %}
+    <div class="mb-3 d-flex flex-wrap gap-2">
+        {% for item in sports_subtype_links %}
+        <a class="btn btn-sm btn-outline-primary" href="{{ item.path }}">{{ item.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if active_section == 'activity' and activities_subtype_links %}
+    <div class="mb-3 d-flex flex-wrap gap-2">
+        {% for item in activities_subtype_links %}
+        <a class="btn btn-sm btn-outline-primary" href="{{ item.path }}">{{ item.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <form method="get" class="row g-2 align-items-end filter-panel p-3 mb-3">
+        <div class="col-12 col-md-3">
+            <label for="id-subtype" class="form-label">{% if active_section == 'sport' %}Sport{% else %}Type{% endif %}</label>
+            <select id="id-subtype" class="form-select" name="subtype">
+                <option value="">Any</option>
+                {% for subtype in subtype_options %}
+                <option value="{{ subtype }}" {% if current_filters.subtype == subtype %}selected{% endif %}>{{ subtype }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label for="id-q" class="form-label">Search</label>
+            <input id="id-q" type="text" class="form-control" name="q" value="{{ current_filters.q }}" placeholder="Sport, activity, organizer...">
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="id-city_town" class="form-label">City/Town</label>
+            <select id="id-city_town" class="form-select" name="city_town">
+                <option value="">Any</option>
+                {% for city in city_options %}
+                <option value="{{ city }}" {% if current_filters.city_town == city %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="id-gender" class="form-label">Gender</label>
+            <select id="id-gender" class="form-select" name="gender">
+                <option value="">Any</option>
+                {% for value, label in gender_options %}
+                <option value="{{ value }}" {% if current_filters.gender == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-1">
+            <label for="id-age" class="form-label">Age</label>
+            <input id="id-age" type="number" min="1" max="18" class="form-control" name="age" value="{{ current_filters.age }}" placeholder="10">
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="id-sort" class="form-label">Sort</label>
+            <select id="id-sort" class="form-select" name="sort">
+                {% for value, label in sort_options %}
+                <option value="{{ value }}" {% if current_filters.sort == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-1 d-grid">
+            <button type="submit" class="btn btn-primary">Go</button>
+        </div>
+    </form>
+</section>
+
+<section class="row g-3">
+    {% for listing in listings %}
+    <div class="col-12 col-md-6 col-xl-4">
+        <article class="listing-card h-100 p-3">
+            {% if listing.image %}
+            <img src="{{ listing.image.url }}" alt="{{ listing.title }} image" class="listing-thumb mb-2">
+            {% endif %}
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge text-bg-light">{{ listing.subtype }}</span>
+                <span class="small text-muted">Ages {{ listing.age_min }}-{{ listing.age_max }}</span>
+            </div>
+            {% if listing.is_stale %}
+            <span class="badge text-bg-warning mb-2">Needs review</span>
+            {% else %}
+            <span class="badge text-bg-success mb-2">Verified recently</span>
+            {% endif %}
+            <h2 class="h5 mb-1">{{ listing.title }}</h2>
+            <p class="mb-1"><strong>{{ listing.city_town }}</strong> Youth {{ listing.subtype }} | Ages {{ listing.age_min }}-{{ listing.age_max }}</p>
+            <p class="small text-muted mb-2">{{ listing.organization_name }} | {{ listing.get_gender_display }}</p>
+            <p class="small mb-2">
+                {% if listing.start_date %}
+                {{ listing.start_date|date:"M j, Y" }}{% if listing.end_date %} - {{ listing.end_date|date:"M j, Y" }}{% endif %}
+                {% else %}
+                {{ listing.season_or_dates }}
+                {% endif %}
+            </p>
+            <p class="small text-muted mb-2">
+                Updated {{ listing.updated_at|date:"M j, Y" }} | Verified {{ listing.last_verified_at|date:"M j, Y" }}
+            </p>
+            <div class="d-flex gap-3">
+                <a href="{% url 'core:listing_detail' listing.pk %}">View details</a>
+                <a href="{% url 'core:listing_outbound' listing.pk %}" target="_blank" rel="noopener noreferrer">Visit {{ listing.city_town }} {{ listing.subtype }} page</a>
+            </div>
+        </article>
+    </div>
+    {% empty %}
+    <p class="text-muted">No listings matched your filters.</p>
+    {% endfor %}
+</section>
+
+{% if is_paginated %}
+<nav aria-label="Listings pagination" class="mt-4">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&subtype={{ current_filters.subtype }}&q={{ current_filters.q }}&city_town={{ current_filters.city_town }}&gender={{ current_filters.gender }}&age={{ current_filters.age }}&sort={{ current_filters.sort }}">Previous</a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&subtype={{ current_filters.subtype }}&q={{ current_filters.q }}&city_town={{ current_filters.city_town }}&gender={{ current_filters.gender }}&age={{ current_filters.age }}&sort={{ current_filters.sort }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
