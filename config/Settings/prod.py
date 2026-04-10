@@ -5,6 +5,10 @@ DEBUG = False
 
 ALLOWED_HOSTS = os.environ['ALLOWED_HOSTS'].split(',')
 
+# Render/other proxies terminate TLS before Django.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 # Whitenoise — insert after SecurityMiddleware
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
@@ -16,6 +20,9 @@ STORAGES = {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
+
+# In production with local filesystem storage, serve media through Django unless explicitly disabled.
+SERVE_MEDIA = _env_bool('SERVE_MEDIA', default=True)
 
 # Persistent DB connections
 CONN_MAX_AGE = 60
@@ -47,4 +54,3 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-

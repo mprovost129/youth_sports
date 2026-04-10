@@ -15,6 +15,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 def _postgres_config_from_database_url(database_url: str) -> dict:
     parsed = urlparse(database_url)
 
@@ -120,9 +127,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-SERVE_MEDIA = os.environ.get('SERVE_MEDIA', '').strip().lower() in ('1', 'true', 'yes', 'on')
+default_media_root = BASE_DIR / 'media'
+render_disk_path = os.environ.get('RENDER_DISK_PATH', '').strip()
+if render_disk_path:
+    default_media_root = Path(render_disk_path) / 'media'
+
+MEDIA_URL = os.environ.get('MEDIA_URL', '/media/')
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(default_media_root)))
+SERVE_MEDIA = _env_bool('SERVE_MEDIA', default=False)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
