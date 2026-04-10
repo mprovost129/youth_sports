@@ -187,6 +187,15 @@ if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', DB_SCHEMA):
         'DB_SCHEMA must be a valid PostgreSQL schema identifier (letters, numbers, underscores).'
     )
 
+# Pin connections to this schema so Django never falls back to shared public tables.
+db_options = default_db.setdefault('OPTIONS', {})
+search_path_option = f'-c search_path={DB_SCHEMA}'
+existing_options = db_options.get('options', '').strip()
+if existing_options:
+    db_options['options'] = f'{existing_options} {search_path_option}'
+else:
+    db_options['options'] = search_path_option
+
 DATABASES = {
     'default': default_db,
 }
@@ -198,7 +207,7 @@ def _set_connection_schema(sender, connection, **kwargs):
 
     with connection.cursor() as cursor:
         cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"')
-        cursor.execute(f'SET search_path TO "{DB_SCHEMA}", public')
+        cursor.execute(f'SET search_path TO "{DB_SCHEMA}"')
 
 
 connection_created.connect(_set_connection_schema)
