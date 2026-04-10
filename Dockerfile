@@ -16,6 +16,8 @@ COPY . .
 
 # Build-time fallback values so collectstatic can run even when .env is not part of the build context.
 RUN SECRET_KEY=build-secret-key \
+    ALLOWED_HOSTS=localhost \
+    DJANGO_SETTINGS_MODULE=config.Settings.prod \
     DB_NAME=build_db \
     DB_USER=build_user \
     DB_PASSWORD=build_password \
