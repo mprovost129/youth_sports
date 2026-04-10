@@ -22,15 +22,23 @@ CONN_MAX_AGE = 60
 
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
+redis_url = os.environ.get('REDIS_URL', '').strip()
+if redis_url:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': redis_url,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
 
 # HTTPS / security
 SECURE_SSL_REDIRECT = True
